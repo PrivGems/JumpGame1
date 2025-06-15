@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jump Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #222;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    #game {
+      position: relative;
+      margin: 30px auto;
+      width: 600px;
+      height: 300px;
+      background: #444;
+      overflow: hidden;
+      border: 3px solid white;
+      border-radius: 10px;
+      display: none;
+    }
+    #player {
+      position: absolute;
+      bottom: 0;
+      left: 50px;
+      width: 40px;
+      height: 40px;
+      background: gold;
+      border-radius: 10px;
+      z-index: 10;
+    }
+    .obstacle {
+      position: absolute;
+      bottom: 0;
+      width: 25px;
+      height: 40px;
+      background: red;
+      left: 600px;
+      transition: bottom 2s ease;
+      z-index: 5;
+    }
+    #score, #highScore {
+      position: absolute;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 5px;
+      user-select: none;
+      z-index: 15;
+    }
+    #score {
+      top: 10px;
+      left: 10px;
+    }
+    #highScore {
+      top: 10px;
+      right: 10px;
+    }
+    #startScreen {
+      margin-top: 100px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      background: gold;
+      color: black;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: orange;
+    }
+    #gameOverScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 80px;
+      user-select: none;
+      display: none;
+      z-index: 20;
+    }
+    #restartBtn {
+      position: absolute;
+      top: 70%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 30px;
+      font-size: 22px;
+      background: gold;
+      color: black;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      z-index: 20;
+    }
+    #restartBtn:hover {
+      background: orange;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h1>Jump Game</h1>
+    <p>Press SPACE to jump</p>
+    <button onclick="startGame()">Play</button>
+  </div>
+
+  <div id="game">
+    <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
+    <div id="player"></div>
+    <div class="obstacle" id="obstacle"></div>
+    <div id="gameOverScreen">😞</div>
+    <button id="restartBtn" onclick="restartGame()">Restart</button>
+  </div>
+
+  <script>
+    const player = document.getElementById("player");
+    const obstacle = document.getElementById("obstacle");
+    const scoreDisplay = document.getElementById("score");
+    const highScoreDisplay = document.getElementById("highScore");
+    const game = document.getElementById("game");
+    const startScreen = document.getElementById("startScreen");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const restartBtn = document.getElementById("restartBtn");
+
+    let isJumping = false;
+    let speed = 200; // pixels/sec
+    let posX = 600;
+    let score = 0;
+    let highScore = 0;
+    let gameRunning = false;
+    let jumpVelocity = 0;
+    let playerY = 0;
+    let gravity = -800;
+    let lastTime = null;
+    let speedMilestone = 0;
+
+    // Load high score from localStorage
+    function loadHighScore() {
+      const stored = localStorage.getItem('jumpGameHighScore');
+      highScore = stored ? parseInt(stored, 10) : 0;
+      highScoreDisplay.textContent = "High Score: " + highScore;
+    }
+
+    // Save high score
+    function saveHighScore() {
+      if(score > highScore){
+        highScore = score;
+        localStorage.setItem('jumpGameHighScore', highScore);
+        highScoreDisplay.textContent = "High Score: " + highScore;
+      }
+    }
+
+    function startGame() {
+      startScreen.style.display = "none";
+      game.style.display = "block";
+      score = 0;
+      posX = 600;
+      speed = 200;
+      playerY = 0;
+      jumpVelocity = 0;
+      lastTime = null;
+      gameRunning = true;
+      speedMilestone = 0;
+      scoreDisplay.textContent = "Score: 0";
+      gameOverScreen.style.display = "none";
+      restartBtn.style.display = "none";
+      obstacle.style.bottom = "0px"; // reset obstacle bottom
+      loadHighScore();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Restart game without reload
+    function restartGame() {
+      startGame();
+    }
+
+    // Handle jump (a bit faster now)
+    document.body.addEventListener("keydown", function (e) {
+      if (e.code === "Space" && !isJumping && gameRunning) {
+        isJumping = true;
+        jumpVelocity = 500;
+      }
+    });
+
+    function gameOver() {
+      gameRunning = false;
+      saveHighScore();
+      gameOverScreen.style.display = "block";
+      restartBtn.style.display = "inline-block";
+
+      // Slowly raise the obstacle up by 100px over 2 seconds
+      obstacle.style.transition = "bottom 2s ease";
+      obstacle.style.bottom = "100px";
+    }
+
+    function checkCollision() {
+      const playerBox = player.getBoundingClientRect();
+      const obstacleBox = obstacle.getBoundingClientRect();
+
+      if (
+        playerBox.right > obstacleBox.left &&
+        playerBox.left < obstacleBox.right &&
+        playerBox.bottom > obstacleBox.top
+      ) {
+        gameOver();
+      }
+    }
+
+    function gameLoop(timestamp) {
+      if (!gameRunning) return;
+
+      if (!lastTime) lastTime = timestamp;
+      const delta = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Move obstacle
+      posX -= speed * delta;
+      if (posX < -25) {
+        posX = 600;
+        score++;
+        scoreDisplay.textContent = "Score: " + score;
+
+        // Increase speed every 5 points
+        if (score % 5 === 0 && score !== 0 && score > speedMilestone) {
+          speed += 30;
+          speedMilestone = score;
+        }
+      }
+      obstacle.style.left = posX + "px";
+
+      // Gravity and jump physics
+      if (isJumping) {
+        jumpVelocity += gravity * delta;
+        playerY += jumpVelocity * delta;
+
+        if (playerY <= 0) {
+          playerY = 0;
+          jumpVelocity = 0;
+          isJumping = false;
+        }
+        player.style.bottom = playerY + "px";
+      }
+
+      checkCollision();
+
+      requestAnimationFrame(gameLoop);
+    }
+  </script>
+</body>
+</html>

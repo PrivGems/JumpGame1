@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Jump Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #222;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    #game {
+      position: relative;
+      margin: 50px auto;
+      width: 600px;
+      height: 300px;
+      background: #444;
+      overflow: hidden;
+      border: 3px solid white;
+      border-radius: 10px;
+    }
+    #player {
+      position: absolute;
+      bottom: 0;
+      left: 50px;
+      width: 40px;
+      height: 40px;
+      background: gold;
+      border-radius: 10px;
+    }
+    .obstacle {
+      position: absolute;
+      bottom: 0;
+      width: 25px;
+      height: 40px;
+      background: red;
+      animation: move linear infinite;
+    }
+    @keyframes move {
+      0% { left: 600px; }
+      100% { left: -50px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Jump Game</h1>
+  <p>Press SPACE to jump!</p>
+  <div id="game">
+    <div id="player"></div>
+    <div class="obstacle" id="obstacle"></div>
+  </div>
+
+  <script>
+    const player = document.getElementById("player");
+    const obstacle = document.getElementById("obstacle");
+
+    let isJumping = false;
+    let speed = 3; // initial duration (seconds)
+    let intervalId;
+
+    // Handle jump
+    document.body.addEventListener("keydown", function (e) {
+      if (e.code === "Space" && !isJumping) {
+        isJumping = true;
+        player.style.transition = "bottom 0.3s";
+        player.style.bottom = "100px";
+
+        setTimeout(() => {
+          player.style.bottom = "0px";
+        }, 300);
+
+        setTimeout(() => {
+          isJumping = false;
+        }, 600);
+      }
+    });
+
+    // Collision detection
+    function checkCollision() {
+      const playerBox = player.getBoundingClientRect();
+      const obstacleBox = obstacle.getBoundingClientRect();
+
+      if (
+        playerBox.right > obstacleBox.left &&
+        playerBox.left < obstacleBox.right &&
+        playerBox.bottom > obstacleBox.top
+      ) {
+        alert("💀 Game Over!");
+        location.reload();
+      }
+    }
+
+    // Speed increase logic
+    function increaseSpeed() {
+      speed = Math.max(0.5, speed - 0.1); // Decrease duration = faster speed
+      obstacle.style.animationDuration = speed + "s";
+    }
+
+    // Start increasing speed every 5 seconds
+    setInterval(increaseSpeed, 5000);
+
+    // Collision loop
+    setInterval(checkCollision, 10);
+
+    // Initial animation speed
+    obstacle.style.animationDuration = speed + "s";
+  </script>
+</body>
+</html>
